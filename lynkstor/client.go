@@ -66,6 +66,7 @@ func (c *client) cmd(cmd string, args ...interface{}) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
+	send_offset := 0
 
 	for try := 1; try <= 3; try++ {
 
@@ -87,10 +88,23 @@ func (c *client) cmd(cmd string, args ...interface{}) skv.Result {
 			c.sock.SetDeadline(time.Now().Add(c.copts.timeout))
 		}
 
-		if _, err = c.sock.Write(buf); err == nil {
+		for n := 0; ; {
+			n, err = c.sock.Write(buf[send_offset:])
+			if err != nil {
+				break
+			}
+			send_offset += n
+
+			if send_offset >= len(buf) {
+				break
+			}
+		}
+
+		if send_offset >= len(buf) {
 			break
 		}
 
+		send_offset = 0
 		c.sock = nil
 		time.Sleep(time.Duration(try) * time.Second)
 	}

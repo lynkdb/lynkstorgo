@@ -50,8 +50,8 @@ func NewConnector(cfg Config) (*Connector, error) {
 		}
 	}
 
-	if cfg.Timeout < 1 {
-		cfg.Timeout = 1
+	if cfg.Timeout < 3 {
+		cfg.Timeout = 3
 	} else if cfg.Timeout > 600 {
 		cfg.Timeout = 600
 	}

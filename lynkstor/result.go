@@ -15,8 +15,7 @@
 package lynkstor
 
 import (
-	"encoding/json"
-	"errors"
+	"fmt"
 
 	"github.com/lessos/lessgo/types"
 	"github.com/lynkdb/iomix/skv"
@@ -30,6 +29,7 @@ const (
 
 type Result struct {
 	status uint8
+	key    []byte
 	data   []byte
 	cap    int
 	items  []*Result
@@ -53,6 +53,10 @@ func newResult(status uint8, err error) *Result {
 
 func (rs *Result) Status() uint8 {
 	return rs.status
+}
+
+func (rs *Result) ErrorString() string {
+	return fmt.Sprintf("ENO: %d, MSG: %s", rs.status, string(rs.data))
 }
 
 func (rs *Result) OK() bool {
@@ -189,12 +193,32 @@ func (rs *Result) KvList() []*skv.ResultEntry {
 	return ls
 }
 
-func (rs *Result) Decode(obj interface{}) error {
-	bs := rs.Bytes()
-	if len(bs) < 3 {
-		return errors.New("json: invalid format")
+func (rs *Result) KvSize() int {
+	return len(rs.items) / 2
+}
+
+func (rs *Result) KvPairs() []skv.Result {
+	ls := []skv.Result{}
+	for i := 1; i < len(rs.items); i += 2 {
+		ls = append(ls, &Result{
+			key:  rs.items[i-1].data,
+			data: rs.items[i].data,
+		})
 	}
-	return json.Unmarshal(bs[1:], obj)
+	return ls
+}
+
+func (rs *Result) KvKey() []byte {
+	return rs.key
+}
+
+func (rs *Result) Decode(obj interface{}) error {
+	return skv.ValueDecode(rs.Bytes(), obj)
+	// bs := rs.Bytes()
+	// if len(bs) < 3 {
+	// 	return errors.New("json: invalid format")
+	// }
+	// return json.Unmarshal(bs[1:], obj)
 }
 
 func (rs *Result) Meta() *skv.MetaObject {

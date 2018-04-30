@@ -33,7 +33,8 @@ func main() {
 		Connector: "iomix/skv/Connector",
 	}
 	conn_cfg.Items.Set("host", "127.0.0.1")
-	conn_cfg.Items.Set("port", "26378")
+	conn_cfg.Items.Set("port", "6378")
+	conn_cfg.Items.Set("timeout", "3")
 
 	fmt.Println("Connect")
 	conn, err := lynkstor.NewConnector(lynkstor.NewConfig(conn_cfg))
@@ -48,11 +49,161 @@ func main() {
 	fmt.Println()
 
 	{
+		if true {
+			// src_file := "/home/eryx/CCTV1/CCTV1_512000_20180317_27852677_51.mp4"
+			// dst_object := "/bucket/demo/02.mp4"
+			src_file := "/home/eryx/item_jd.zip"
+			dst_object := "/abc/abc/abc.zip"
+			// src_file := "/opt/gopath/src/github.com/sysinner/insoho/var/tmp/git-2.15.1-3.el7.x64.txz"
+			// dst_object := "/git/2.15.1/git-2.15.1-3.el7.x64.txz"
+			if rs := conn.OsFilePut(src_file, dst_object); !rs.OK() {
+				print_err("ER " + rs.String())
+			} else {
+				print_ok("OK")
+			}
+			return
+		}
+
+		mp_block_sn := uint32(0)
+		for i := 0; i < 2; i++ {
+			fmt.Println("OS MP INIT", i)
+			mp_init := skv.NewObjStorEntryMpInit(fmt.Sprintf("/abc/123-%d", i), 10)
+			if rs := conn.OsMpInit(mp_init); !rs.OK() {
+				print_err("ER " + rs.String())
+			} else {
+				print_ok("OK")
+
+				rs_meta := rs.Meta()
+				if rs_meta == nil {
+					print_err("ER no meta found")
+				} else {
+					var os_meta skv.ObjStorEntryMeta
+					if err := rs.Decode(&os_meta); err != nil {
+						print_err("ER decode meta : " + err.Error())
+					} else {
+						rs_js, _ := json.Encode(rs_meta, "  ")
+						os_js, _ := json.Encode(os_meta, "  ")
+						print_ok(fmt.Sprintf("OK %s /// %s", string(rs_js), string(os_js)))
+						if i == 0 {
+							mp_block_sn = os_meta.Sn
+						}
+					}
+				}
+			}
+
+			fmt.Println("OS MP PUT", i)
+			mp_block := skv.NewObjStorEntryBlock(fmt.Sprintf("/abc/123-%d", i), 10, 0, []byte("0123456789"), "")
+			if rs := conn.OsMpPut(mp_block); !rs.OK() {
+				print_err("ER " + rs.String())
+				fmt.Println(rs.Status())
+			} else {
+				print_ok("OK")
+			}
+		}
+
+		fmt.Println("OS MP GET")
+		mp_block := skv.NewObjStorEntryBlock("/abc/123-0", 0, 0, nil, "")
+		mp_block.Sn = mp_block_sn
+		if rs := conn.OsMpGet(mp_block); !rs.OK() {
+			print_err("ER " + rs.String())
+			fmt.Println(rs.Status())
+		} else {
+			print_ok("OK ")
+			rs_meta := rs.Meta()
+			if rs_meta == nil {
+				print_err("ER no meta found")
+			} else {
+				var os_block skv.ObjStorEntryBlock
+				if err := rs.Decode(&os_block); err != nil {
+					print_err("ER decode meta : " + err.Error())
+				} else {
+					rs_js, _ := json.Encode(rs_meta, "  ")
+					os_js, _ := json.Encode(os_block, "  ")
+					print_ok(fmt.Sprintf("OK %s /// %s", string(rs_js), string(os_js)))
+					print_ok("OK DATA {{{" + string(os_block.Data) + "}}}")
+				}
+			}
+		}
+
+		fmt.Println("OS GET")
+		if rs := conn.OsGet("/abc/123-0"); !rs.OK() {
+			print_err("ER " + rs.String())
+			fmt.Println(rs.Status())
+		} else {
+			print_ok("OK ")
+			rs_meta := rs.Meta()
+			if rs_meta == nil {
+				print_err("ER no meta found")
+			} else {
+				var os_meta skv.ObjStorEntryMeta
+				if err := rs.Decode(&os_meta); err != nil {
+					print_err("ER decode meta : " + err.Error())
+				} else {
+					rs_js, _ := json.Encode(rs_meta, "  ")
+					os_js, _ := json.Encode(os_meta, "  ")
+					print_ok(fmt.Sprintf("OK %s /// %s", string(rs_js), string(os_js)))
+				}
+			}
+		}
+
+		fmt.Println("OS SCAN")
+		if rs := conn.OsScan("/abc/", "/abc/", 10); !rs.OK() {
+			print_err("ER " + rs.String())
+		} else {
+			ls := rs.KvPairs()
+			print_ok(fmt.Sprintf("OK num:%d", len(ls)))
+			for i, v := range ls {
+				print_ok(fmt.Sprintf("OK i:%d, k:%s", i, v.KvKey()))
+
+				rs_meta := v.Meta()
+				if rs_meta == nil {
+					print_err("ER no meta found")
+				} else {
+					var os_meta skv.ObjStorEntryMeta
+					if err := v.Decode(&os_meta); err != nil {
+						print_err("ER decode meta : " + err.Error())
+					} else {
+						rs_js, _ := json.Encode(rs_meta, "  ")
+						os_js, _ := json.Encode(os_meta, "  ")
+						print_ok(fmt.Sprintf("OK\nrs_meta: %s\nos_meta: %s", string(rs_js), string(os_js)))
+					}
+				}
+			}
+		}
+
+		fmt.Println("OS REVSCAN")
+		if rs := conn.OsRevScan("/abc/", "/abc/", 10); !rs.OK() {
+			print_err("ER " + rs.String())
+		} else {
+			ls := rs.KvPairs()
+			print_ok(fmt.Sprintf("OK num:%d", len(ls)))
+			for i, v := range ls {
+				print_ok(fmt.Sprintf("OK i:%d, k:%s", i, v.KvKey()))
+
+				rs_meta := v.Meta()
+				if rs_meta == nil {
+					print_err("ER no meta found")
+				} else {
+					var os_meta skv.ObjStorEntryMeta
+					if err := v.Decode(&os_meta); err != nil {
+						print_err("ER decode meta : " + err.Error())
+					} else {
+						rs_js, _ := json.Encode(rs_meta, "  ")
+						os_js, _ := json.Encode(os_meta, "  ")
+						print_ok(fmt.Sprintf("OK\nrs_meta: %s\nos_meta: %s", string(rs_js), string(os_js)))
+					}
+				}
+			}
+		}
+
+		return
+	}
+
+	{
 		k := skv.NewProgKey("iam", "afm", "")
 		if rs := conn.ProgRevScan(k, k, 1000); rs.OK() {
 			fmt.Println("len ", len(rs.KvList()))
 		}
-		return
 
 		fmt.Println("PROG PUT")
 		if rs := conn.ProgPut(skv.NewProgKey("abc", "def"), skv.NewValueObject("value-of"), nil); !rs.OK() {

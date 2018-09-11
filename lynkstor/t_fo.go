@@ -25,7 +25,7 @@ import (
 	"github.com/lynkdb/iomix/skv"
 )
 
-func (cn *Connector) OsMpInit(sets skv.ObjStorEntryMpInit) skv.Result {
+func (cn *Connector) FoMpInit(sets skv.FileObjectEntryInit) skv.Result {
 	if !sets.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -33,10 +33,10 @@ func (cn *Connector) OsMpInit(sets skv.ObjStorEntryMpInit) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("osmpinit", bs)
+	return cn.Cmd("fompinit", bs)
 }
 
-func (cn *Connector) OsMpPut(sets skv.ObjStorEntryBlock) skv.Result {
+func (cn *Connector) FoMpPut(sets skv.FileObjectEntryBlock) skv.Result {
 	if !sets.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -44,30 +44,30 @@ func (cn *Connector) OsMpPut(sets skv.ObjStorEntryBlock) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("osmpput", bs)
+	return cn.Cmd("fompput", bs)
 }
 
-func (cn *Connector) OsMpGet(sets skv.ObjStorEntryBlock) skv.Result {
+func (cn *Connector) FoMpGet(sets skv.FileObjectEntryBlock) skv.Result {
 	bs, err := proto.Marshal(&sets)
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("osmpget", bs)
+	return cn.Cmd("fompget", bs)
 }
 
-func (cn *Connector) OsGet(path_key string) skv.Result {
-	return cn.Cmd("osget", skv.ObjStorPathEncode(path_key))
+func (cn *Connector) FoGet(path_key string) skv.Result {
+	return cn.Cmd("foget", skv.FileObjectPathEncode(path_key))
 }
 
-func (cn *Connector) OsScan(offset, cutset string, limit int) skv.Result {
-	return cn.Cmd("osscan", skv.ObjStorPathEncode(offset), skv.ObjStorPathEncode(cutset), limit)
+func (cn *Connector) FoScan(offset, cutset string, limit int) skv.Result {
+	return cn.Cmd("foscan", skv.FileObjectPathEncode(offset), skv.FileObjectPathEncode(cutset), limit)
 }
 
-func (cn *Connector) OsRevScan(offset, cutset string, limit int) skv.Result {
-	return cn.Cmd("osrevscan", skv.ObjStorPathEncode(offset), skv.ObjStorPathEncode(cutset), limit)
+func (cn *Connector) FoRevScan(offset, cutset string, limit int) skv.Result {
+	return cn.Cmd("forevscan", skv.FileObjectPathEncode(offset), skv.FileObjectPathEncode(cutset), limit)
 }
 
-func (cn *Connector) OsFilePut(src_path, dst_path string) skv.Result {
+func (cn *Connector) FoFilePut(src_path, dst_path string) skv.Result {
 
 	fp, err := os.Open(src_path)
 	if err != nil {
@@ -83,38 +83,38 @@ func (cn *Connector) OsFilePut(src_path, dst_path string) skv.Result {
 		return newResult(skv.ResultBadArgument, errors.New("invalid file size"))
 	}
 
-	mp_init := skv.NewObjStorEntryMpInit(dst_path, uint64(st.Size()))
-	rs := cn.OsMpInit(mp_init)
+	mp_init := skv.NewFileObjectEntryInit(dst_path, uint64(st.Size()))
+	rs := cn.FoMpInit(mp_init)
 	if !rs.OK() {
 		return rs
 	}
 
-	var os_meta skv.ObjStorEntryMeta
-	if err := rs.Decode(&os_meta); err != nil {
+	var fo_meta skv.FileObjectEntryMeta
+	if err := rs.Decode(&fo_meta); err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
 
-	if os_meta.Size != uint64(st.Size()) {
+	if fo_meta.Size != uint64(st.Size()) {
 		return newResult(skv.ResultBadArgument, errors.New("protocol error"))
 	}
 
-	if !os_meta.AttrAllow(skv.ObjStorEntryAttrCommiting) {
+	if !fo_meta.AttrAllow(skv.FileObjectEntryAttrCommiting) {
 		return newResult(skv.ResultOK, nil)
 	}
 
 	block_size := uint64(0)
-	if os_meta.AttrAllow(skv.ObjStorEntryAttrBlockSize4) {
-		block_size = skv.ObjStorBlockSize4
+	if fo_meta.AttrAllow(skv.FileObjectEntryAttrBlockSize4) {
+		block_size = skv.FileObjectBlockSize4
 	}
 
 	if block_size == 0 {
 		return newResult(skv.ResultBadArgument, errors.New("protocol error"))
 	}
 
-	block_dones := types.ArrayUint32(os_meta.Blocks)
+	block_dones := types.ArrayUint32(fo_meta.Blocks)
 
-	num := uint32(os_meta.Size / block_size)
-	if num > 0 && (os_meta.Size%block_size) == 0 {
+	num := uint32(fo_meta.Size / block_size)
+	if num > 0 && (fo_meta.Size%block_size) == 0 {
 		num -= 1
 	}
 	// fmt.Println("block num ", num)
@@ -126,7 +126,7 @@ func (cn *Connector) OsFilePut(src_path, dst_path string) skv.Result {
 
 		bsize := int(block_size)
 		if n == num {
-			bsize = int(os_meta.Size % block_size)
+			bsize = int(fo_meta.Size % block_size)
 		}
 
 		bs := make([]byte, bsize)
@@ -135,9 +135,9 @@ func (cn *Connector) OsFilePut(src_path, dst_path string) skv.Result {
 		} else if rn != bsize {
 			return newResult(skv.ResultBadArgument, errors.New("io error"))
 		} else {
-			mp_block := skv.NewObjStorEntryBlock(dst_path, os_meta.Size, n, bs, os_meta.CommitKey)
+			mp_block := skv.NewFileObjectEntryBlock(dst_path, fo_meta.Size, n, bs, fo_meta.CommitKey)
 			mp_block.Sum = uint64(crc32.ChecksumIEEE(bs))
-			if rs = cn.OsMpPut(mp_block); !rs.OK() {
+			if rs = cn.FoMpPut(mp_block); !rs.OK() {
 				return rs
 			}
 		}
@@ -146,16 +146,16 @@ func (cn *Connector) OsFilePut(src_path, dst_path string) skv.Result {
 	return newResult(skv.ResultOK, nil)
 }
 
-type OsReadSeeker struct {
+type FoReadSeeker struct {
 	conn      *Connector
-	db_meta   *skv.MetaObject
-	os_meta   skv.ObjStorEntryMeta
+	db_meta   *skv.KvMeta
+	fo_meta   skv.FileObjectEntryMeta
 	path      string
 	offset    int64
-	cur_block *skv.ObjStorEntryBlock
+	cur_block *skv.FileObjectEntryBlock
 }
 
-func (fo *OsReadSeeker) Seek(offset int64, whence int) (int64, error) {
+func (fo *FoReadSeeker) Seek(offset int64, whence int) (int64, error) {
 
 	abs := int64(0)
 
@@ -167,7 +167,7 @@ func (fo *OsReadSeeker) Seek(offset int64, whence int) (int64, error) {
 		abs = fo.offset + offset
 
 	case 2:
-		abs = offset + int64(fo.os_meta.Size)
+		abs = offset + int64(fo.fo_meta.Size)
 
 	default:
 		return 0, errors.New("invalid seek whence")
@@ -181,22 +181,22 @@ func (fo *OsReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	return fo.offset, nil
 }
 
-func (fo *OsReadSeeker) Read(b []byte) (n int, err error) {
+func (fo *FoReadSeeker) Read(b []byte) (n int, err error) {
 
 	if len(b) == 0 {
 		return 0, nil
 	}
 
 	block_size := int64(0)
-	if fo.os_meta.AttrAllow(skv.ObjStorEntryAttrBlockSize4) {
-		block_size = int64(skv.ObjStorBlockSize4)
+	if fo.fo_meta.AttrAllow(skv.FileObjectEntryAttrBlockSize4) {
+		block_size = int64(skv.FileObjectBlockSize4)
 	}
 	if block_size == 0 {
 		return 0, errors.New("protocol error")
 	}
 
-	blk_num_max := uint32(fo.os_meta.Size / uint64(block_size))
-	if (fo.os_meta.Size % uint64(block_size)) > 0 {
+	blk_num_max := uint32(fo.fo_meta.Size / uint64(block_size))
+	if (fo.fo_meta.Size % uint64(block_size)) > 0 {
 		blk_num_max += 1
 	}
 
@@ -209,7 +209,7 @@ func (fo *OsReadSeeker) Read(b []byte) (n int, err error) {
 
 	for {
 
-		if fo.offset >= int64(fo.os_meta.Size) {
+		if fo.offset >= int64(fo.fo_meta.Size) {
 			return n_done, io.EOF
 		}
 
@@ -226,23 +226,23 @@ func (fo *OsReadSeeker) Read(b []byte) (n int, err error) {
 
 		if fo.cur_block == nil || fo.cur_block.Num != blk_num {
 
-			blk_block := skv.NewObjStorEntryBlock(fo.path, 0, blk_num, nil, "")
-			blk_block.Sn = fo.os_meta.Sn
-			rs := fo.conn.OsMpGet(blk_block)
+			blk_block := skv.NewFileObjectEntryBlock(fo.path, 0, blk_num, nil, "")
+			blk_block.Sn = fo.fo_meta.Sn
+			rs := fo.conn.FoMpGet(blk_block)
 			if !rs.OK() {
 				return 0, errors.New("io error")
 			}
 
-			var os_block skv.ObjStorEntryBlock
-			if err := rs.Decode(&os_block); err != nil {
+			var fo_block skv.FileObjectEntryBlock
+			if err := rs.Decode(&fo_block); err != nil {
 				return 0, errors.New("io error")
 			}
 
-			if len(os_block.Data) < 1 {
+			if len(fo_block.Data) < 1 {
 				return 0, errors.New("io error")
 			}
 
-			fo.cur_block = &os_block
+			fo.cur_block = &fo_block
 
 			// fmt.Println("Read", fo.path, "fo.offset", fo.offset, "num", blk_num, "data", len(fo.cur_block.Data))
 		}
@@ -273,9 +273,9 @@ func (fo *OsReadSeeker) Read(b []byte) (n int, err error) {
 	return n_done, nil
 }
 
-func (cn *Connector) OsFileOpen(path string) (io.ReadSeeker, error) {
+func (cn *Connector) FoFileOpen(path string) (io.ReadSeeker, error) {
 
-	rs := cn.OsGet(path)
+	rs := cn.FoGet(path)
 	if !rs.OK() {
 		return nil, errors.New(rs.String())
 	}
@@ -284,16 +284,16 @@ func (cn *Connector) OsFileOpen(path string) (io.ReadSeeker, error) {
 		return nil, errors.New("ER no meta found")
 	}
 
-	var os_meta skv.ObjStorEntryMeta
-	if err := rs.Decode(&os_meta); err != nil {
+	var fo_meta skv.FileObjectEntryMeta
+	if err := rs.Decode(&fo_meta); err != nil {
 		return nil, errors.New("ER decode meta : " + err.Error())
 	}
 
-	// fmt.Println("OsFileOpen", path)
-	return &OsReadSeeker{
+	// fmt.Println("FoFileOpen", path)
+	return &FoReadSeeker{
 		conn:    cn,
 		db_meta: rs_meta,
-		os_meta: os_meta,
+		fo_meta: fo_meta,
 		path:    path,
 		offset:  0,
 	}, nil

@@ -80,15 +80,15 @@ func (rs *Result) Bytes() []byte {
 }
 
 func (rs *Result) Bytex() types.Bytex {
-	return skv.ValueBytes(rs.Bytes()).Bytex()
+	return skv.KvValueBytes(rs.Bytes()).Bytex()
 }
 
 func (rs *Result) String() string {
-	return skv.ValueBytes(rs.Bytes()).String()
+	return skv.KvValueBytes(rs.Bytes()).String()
 }
 
 func (rs *Result) Bool() bool {
-	return skv.ValueBytes(rs.Bytes()).Bool()
+	return skv.KvValueBytes(rs.Bytes()).Bool()
 }
 
 func (rs *Result) Int() int {
@@ -108,7 +108,7 @@ func (rs *Result) Int32() int32 {
 }
 
 func (rs *Result) Int64() int64 {
-	return skv.ValueBytes(rs.Bytes()).Int64()
+	return skv.KvValueBytes(rs.Bytes()).Int64()
 }
 
 func (rs *Result) Uint() uint {
@@ -128,7 +128,7 @@ func (rs *Result) Uint32() uint32 {
 }
 
 func (rs *Result) Uint64() uint64 {
-	return skv.ValueBytes(rs.Bytes()).Uint64()
+	return skv.KvValueBytes(rs.Bytes()).Uint64()
 }
 
 func (rs *Result) Float32() float32 {
@@ -136,7 +136,7 @@ func (rs *Result) Float32() float32 {
 }
 
 func (rs *Result) Float64() float64 {
-	return skv.ValueBytes(rs.Bytes()).Float64()
+	return skv.KvValueBytes(rs.Bytes()).Float64()
 }
 
 func (rs *Result) ListLen() int {
@@ -221,12 +221,12 @@ func (rs *Result) Decode(obj interface{}) error {
 	// return json.Unmarshal(bs[1:], obj)
 }
 
-func (rs *Result) Meta() *skv.MetaObject {
+func (rs *Result) Meta() *skv.KvMeta {
 	if len(rs.data) > 1 {
 		if rs.data[0] == kvobj_t_v1 {
 			offset := int(rs.data[1]) + 2
 			if offset <= len(rs.data) {
-				return skv.MetaObjectDecode(rs.data[2:offset])
+				return skv.KvMetaDecode(rs.data[2:offset])
 			}
 		}
 	}

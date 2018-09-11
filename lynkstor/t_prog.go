@@ -19,22 +19,22 @@ import (
 	"github.com/lynkdb/iomix/skv"
 )
 
-func (cn *Connector) ProgNew(key skv.ProgKey, val skv.ValueObject, opts *skv.ProgWriteOptions) skv.Result {
+func (cn *Connector) KvProgNew(key skv.KvProgKey, val skv.KvEntry, opts *skv.KvProgWriteOptions) skv.Result {
 
 	if opts == nil {
-		opts = &skv.ProgWriteOptions{}
+		opts = &skv.KvProgWriteOptions{}
 	}
 
-	opts.Actions = opts.Actions | skv.ProgOpCreate
+	opts.Actions = opts.Actions | skv.KvProgOpCreate
 
-	return cn.ProgPut(key, val, opts)
+	return cn.KvProgPut(key, val, opts)
 }
 
-func (cn *Connector) ProgPut(key skv.ProgKey, val skv.ValueObject, opts *skv.ProgWriteOptions) skv.Result {
+func (cn *Connector) KvProgPut(key skv.KvProgKey, val skv.KvEntry, opts *skv.KvProgWriteOptions) skv.Result {
 	if !key.Valid() || !val.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
-	pc := &skv.ProgKeyValueCommit{
+	pc := &skv.KvProgKeyValueCommit{
 		Key:     &key,
 		Value:   val.Value,
 		Options: opts,
@@ -43,10 +43,10 @@ func (cn *Connector) ProgPut(key skv.ProgKey, val skv.ValueObject, opts *skv.Pro
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progput", bs)
+	return cn.Cmd("kvprogput", bs)
 }
 
-func (cn *Connector) ProgGet(key skv.ProgKey) skv.Result {
+func (cn *Connector) KvProgGet(key skv.KvProgKey) skv.Result {
 	if !key.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -54,14 +54,14 @@ func (cn *Connector) ProgGet(key skv.ProgKey) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progget", bs)
+	return cn.Cmd("kvprogget", bs)
 }
 
-func (cn *Connector) ProgDel(key skv.ProgKey, opts *skv.ProgWriteOptions) skv.Result {
+func (cn *Connector) KvProgDel(key skv.KvProgKey, opts *skv.KvProgWriteOptions) skv.Result {
 	if !key.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
-	pc := &skv.ProgKeyValueCommit{
+	pc := &skv.KvProgKeyValueCommit{
 		Key:     &key,
 		Options: opts,
 	}
@@ -69,10 +69,10 @@ func (cn *Connector) ProgDel(key skv.ProgKey, opts *skv.ProgWriteOptions) skv.Re
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progdel", bs)
+	return cn.Cmd("kvprogdel", bs)
 }
 
-func (cn *Connector) ProgScan(offset, cutset skv.ProgKey, limit int) skv.Result {
+func (cn *Connector) KvProgScan(offset, cutset skv.KvProgKey, limit int) skv.Result {
 	if !offset.Valid() || !cutset.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -84,10 +84,10 @@ func (cn *Connector) ProgScan(offset, cutset skv.ProgKey, limit int) skv.Result 
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progscan", k1, k2, limit)
+	return cn.Cmd("kvprogscan", k1, k2, limit)
 }
 
-func (cn *Connector) ProgRevScan(offset, cutset skv.ProgKey, limit int) skv.Result {
+func (cn *Connector) KvProgRevScan(offset, cutset skv.KvProgKey, limit int) skv.Result {
 	if !offset.Valid() || !cutset.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -99,10 +99,10 @@ func (cn *Connector) ProgRevScan(offset, cutset skv.ProgKey, limit int) skv.Resu
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progrevscan", k1, k2, limit)
+	return cn.Cmd("kvprogrevscan", k1, k2, limit)
 }
 
-func (cn *Connector) ProgIncr(key skv.ProgKey, incr int64) skv.Result {
+func (cn *Connector) KvProgIncr(key skv.KvProgKey, incr int64) skv.Result {
 	if !key.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -110,10 +110,10 @@ func (cn *Connector) ProgIncr(key skv.ProgKey, incr int64) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progincr", bs, incr)
+	return cn.Cmd("kvprogincr", bs, incr)
 }
 
-func (cn *Connector) ProgMeta(key skv.ProgKey) skv.Result {
+func (cn *Connector) KvProgMeta(key skv.KvProgKey) skv.Result {
 	if !key.Valid() {
 		return newResult(skv.ResultBadArgument, nil)
 	}
@@ -121,5 +121,5 @@ func (cn *Connector) ProgMeta(key skv.ProgKey) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	return cn.Cmd("progmeta", bs)
+	return cn.Cmd("kvprogmeta", bs)
 }

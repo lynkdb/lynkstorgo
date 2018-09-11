@@ -180,7 +180,7 @@ func main() {
 				log.Fatal("invalid type")
 			}
 
-			meta2 := &skv.MetaObject{}
+			meta2 := &skv.KvMeta{}
 			meta := v.Meta()
 			if meta != nil {
 				if meta.Expired > 0 {

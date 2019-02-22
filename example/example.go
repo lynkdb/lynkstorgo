@@ -48,7 +48,7 @@ func main() {
 
 	fmt.Println()
 
-	{
+	if false {
 		if false {
 			// src_file := "/home/eryx/CCTV1/CCTV1_512000_20180317_27852677_51.mp4"
 			// dst_object := "/bucket/demo/02.mp4"
@@ -195,11 +195,9 @@ func main() {
 				}
 			}
 		}
-
-		return
 	}
 
-	{
+	if false {
 		k := skv.NewKvProgKey("iam", "afm", "")
 		if rs := conn.KvProgRevScan(k, k, 1000); rs.OK() {
 			fmt.Println("len ", len(rs.KvList()))
@@ -292,6 +290,7 @@ func main() {
 		}
 	}
 
+	//
 	{
 		fmt.Println("KVPUT API::Bool() bool")
 		if rs := conn.KvPut([]byte("true"), "True", nil); !rs.OK() {

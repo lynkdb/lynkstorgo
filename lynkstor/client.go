@@ -33,12 +33,13 @@ var (
 )
 
 type client struct {
+	num    int
 	sock   net.Conn
 	reader *bufio.Reader
 	copts  *connOptions
 }
 
-func newClient(copts *connOptions) (*client, error) {
+func newClient(copts *connOptions, num int) (*client, error) {
 
 	sock, err := net.Dial(copts.net, copts.addr)
 	if err != nil {
@@ -46,6 +47,7 @@ func newClient(copts *connOptions) (*client, error) {
 	}
 
 	cli := &client{
+		num:    num,
 		sock:   sock,
 		reader: bufio.NewReaderSize(sock, bufio_size),
 		copts:  copts,
@@ -68,49 +70,34 @@ func (c *client) cmd(cmd string, args ...interface{}) skv.Result {
 	}
 	send_offset := 0
 
-	for try := 1; try <= 3; try++ {
-
-		if c.sock == nil {
-			sock, err := net.Dial(c.copts.net, c.copts.addr)
-			if err != nil {
-				return newResult(skv.ResultNetError, err)
-			}
-			c.sock = sock
-			c.sock.SetDeadline(time.Now().Add(c.copts.timeout))
-			c.reader = bufio.NewReaderSize(sock, bufio_size)
-
-			if c.copts.auth != "" {
-				if rs := c.cmd("auth", c.copts.auth); !rs.OK() {
-					return newResult(skv.ResultNoAuth, err_auth)
-				}
-			}
-		} else {
-			c.sock.SetDeadline(time.Now().Add(c.copts.timeout))
+	if c.sock == nil {
+		sock, err := net.Dial(c.copts.net, c.copts.addr)
+		if err != nil {
+			return newResult(skv.ResultNetError, err)
 		}
+		c.sock = sock
+		c.sock.SetDeadline(time.Now().Add(c.copts.timeout))
+		c.reader = bufio.NewReaderSize(sock, bufio_size)
 
-		for n := 0; ; {
-			n, err = c.sock.Write(buf[send_offset:])
-			if err != nil {
-				break
-			}
-			send_offset += n
-
-			if send_offset >= len(buf) {
-				break
+		if c.copts.auth != "" {
+			if rs := c.cmd("auth", c.copts.auth); !rs.OK() {
+				return newResult(skv.ResultNoAuth, err_auth)
 			}
 		}
+	} else {
+		c.sock.SetDeadline(time.Now().Add(c.copts.timeout))
+	}
+
+	for n := 0; ; {
+		n, err = c.sock.Write(buf[send_offset:])
+		if err != nil {
+			return newResult(skv.ResultNetError, err)
+		}
+		send_offset += n
 
 		if send_offset >= len(buf) {
 			break
 		}
-
-		send_offset = 0
-		c.sock = nil
-		time.Sleep(time.Duration(try) * time.Second)
-	}
-
-	if err != nil {
-		return newResult(skv.ResultNetError, err)
 	}
 
 	rs, err := c.cmd_parse()
@@ -284,65 +271,6 @@ func (c *client) Close() error {
 		c.sock = nil
 	}
 	return nil
-}
-
-func value_encode(value interface{}) []byte {
-
-	bs := []byte{value_ns_bytes}
-
-	switch argt := value.(type) {
-
-	case []byte:
-		bs = append(bs, argt...)
-
-	case string:
-		bs = append(bs, []byte(argt)...)
-
-	case int:
-		bs = append(bs, []byte(strconv.FormatInt(int64(argt), 10))...)
-
-	case int8:
-		bs = append(bs, []byte(strconv.FormatInt(int64(argt), 10))...)
-
-	case int16:
-		bs = append(bs, []byte(strconv.FormatInt(int64(argt), 10))...)
-
-	case int32:
-		bs = append(bs, []byte(strconv.FormatInt(int64(argt), 10))...)
-
-	case int64:
-		bs = append(bs, []byte(strconv.FormatInt(argt, 10))...)
-
-	case uint:
-		bs = append(bs, []byte(strconv.FormatUint(uint64(argt), 10))...)
-
-	case uint8:
-		bs = append(bs, []byte(strconv.FormatUint(uint64(argt), 10))...)
-
-	case uint16:
-		bs = append(bs, []byte(strconv.FormatUint(uint64(argt), 10))...)
-
-	case uint32:
-		bs = append(bs, []byte(strconv.FormatUint(uint64(argt), 10))...)
-
-	case uint64:
-		bs = append(bs, []byte(strconv.FormatUint(argt, 10))...)
-
-	case float32:
-		bs = append(bs, []byte(strconv.FormatFloat(float64(argt), 'f', -1, 32))...)
-
-	case float64:
-		bs = append(bs, []byte(strconv.FormatFloat(float64(argt), 'f', -1, 64))...)
-
-	case bool:
-		if argt {
-			bs = append(bs, '1')
-		} else {
-			bs = append(bs, '0')
-		}
-	}
-
-	return bs
 }
 
 func send_buf_cmd(cmd string, args []interface{}) ([]byte, error) {

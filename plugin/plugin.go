@@ -10,3 +10,7 @@ import (
 func NewConnector(copts *connect.ConnOptions) (skv.Connector, error) {
 	return lynkstor.NewConnector(lynkstor.NewConfig(*copts))
 }
+
+func NewFileObjectConnector(copts *connect.ConnOptions) (skv.FileObjectConnector, error) {
+	return lynkstor.NewConnector(lynkstor.NewConfig(*copts))
+}

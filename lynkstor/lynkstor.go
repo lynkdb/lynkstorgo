@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/hooto/hlog4g/hlog"
 	"github.com/lynkdb/iomix/skv"
 )
 
@@ -82,7 +83,7 @@ func NewConnector(cfg Config) (*Connector, error) {
 	}
 
 	for i := 0; i < cfg.MaxConn; i++ {
-		cli, err := newClient(c.copts)
+		cli, err := newClient(c.copts, i)
 		if err != nil {
 			return c, err
 		}
@@ -93,10 +94,32 @@ func NewConnector(cfg Config) (*Connector, error) {
 }
 
 func (c *Connector) Cmd(cmd string, args ...interface{}) skv.Result {
-	cli, _ := c.pull()
-	defer c.push(cli)
 
-	return cli.cmd(cmd, args...)
+	var (
+		cli, _ = c.pull()
+		rs     skv.Result
+	)
+
+	for try := 1; try <= 3; try++ {
+
+		rs = cli.cmd(cmd, args...)
+		if rs.Status() != skv.ResultNetError {
+			break
+		}
+
+		time.Sleep(time.Duration(try) * time.Second)
+
+		if cn, err := newClient(c.copts, cli.num); err == nil {
+			cli.Close()
+			cli = cn
+			hlog.Printf("info", "lynkdb/lynkstorgo reconnect %s://%s #%d",
+				c.copts.net, c.copts.addr, cli.num)
+		}
+	}
+
+	c.push(cli)
+
+	return rs
 }
 
 func (c *Connector) Close() error {

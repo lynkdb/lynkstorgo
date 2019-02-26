@@ -22,18 +22,18 @@ import (
 
 func (c *Connector) KvNew(key []byte, value interface{}, opts *skv.KvWriteOptions) skv.Result {
 	args := []interface{}{
-		key, value_encode(value), "NX",
+		key, skv.ValueEncodeBytes(value, nil), "NX",
 	}
 	if opts != nil && opts.Ttl > 0 {
 		args = append(args, "PX")
 		args = append(args, strconv.FormatInt(opts.Ttl, 10))
 	}
-	return c.Cmd("kvnew", args...)
+	return c.Cmd("kvput", args...)
 }
 
 func (c *Connector) KvPut(key []byte, value interface{}, opts *skv.KvWriteOptions) skv.Result {
 	args := []interface{}{
-		key, value_encode(value),
+		key, skv.ValueEncodeBytes(value, nil),
 	}
 	if opts != nil && opts.Ttl > 0 {
 		args = append(args, "PX")

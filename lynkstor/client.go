@@ -68,7 +68,6 @@ func (c *client) cmd(cmd string, args ...interface{}) skv.Result {
 	if err != nil {
 		return newResult(skv.ResultBadArgument, err)
 	}
-	send_offset := 0
 
 	if c.sock == nil {
 		sock, err := net.Dial(c.copts.net, c.copts.addr)
@@ -88,8 +87,9 @@ func (c *client) cmd(cmd string, args ...interface{}) skv.Result {
 		c.sock.SetDeadline(time.Now().Add(c.copts.timeout))
 	}
 
-	for n := 0; ; {
-		n, err = c.sock.Write(buf[send_offset:])
+	send_offset := 0
+	for {
+		n, err := c.sock.Write(buf[send_offset:])
 		if err != nil {
 			return newResult(skv.ResultNetError, err)
 		}

@@ -4,7 +4,7 @@ import (
 	"github.com/lynkdb/iomix/connect"
 	"github.com/lynkdb/iomix/skv"
 
-	"code.hooto.com/lynkdb/lynkstorgo/lynkstor"
+	"github.com/lynkdb/lynkstorgo/lynkstor"
 )
 
 func NewConnector(copts *connect.ConnOptions) (skv.Connector, error) {

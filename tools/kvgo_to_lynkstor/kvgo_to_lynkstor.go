@@ -28,7 +28,7 @@ import (
 	"github.com/lynkdb/iomix/skv"
 	"github.com/lynkdb/kvgo"
 
-	"code.hooto.com/lynkdb/lynkstorgo/lynkstor"
+	"github.com/lynkdb/lynkstorgo/lynkstor"
 )
 
 func main() {
